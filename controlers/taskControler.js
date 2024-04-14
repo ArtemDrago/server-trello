@@ -126,94 +126,95 @@ class TaskControler {
         return res.status(200).json({ message: `sucess delete task` });
     };
 
-   async changeTask(req, res, next) {
-      try {
-        let request = req.body;
-        if (request.user_id == undefined) {
-            request = req.query;
-        }
-        const { id } = req.params;
+    async changeTask(req, res, next) {
+        try {
+            let request = req.body;
+            if (request.user_id == undefined) {
+                request = req.query;
+            }
+            const { id } = req.params;
 
-        let { 
-            user_id, 
-            newTitle,
-            newDescription,
-            newTimer,
-            newDataExpiration,
-            newDeadline,
-            newCollumn,
-            newPositionCollumn 
-        } = request;
+            let { 
+                user_id, 
+                newTitle,
+                newDescription,
+                newTimer,
+                newDataExpiration,
+                newDeadline,
+                newCollumn,
+                newPositionCollumn 
+            } = request;
 
-        const task = await Task.findOne({
-            where: { id, user_id },
-        });
+            const task = await Task.findOne({
+                where: { id, user_id },
+            });
 
-        if  (task != null) {
-                if (!!newTitle && newTitle.length != 0) {
-                   task.title = newTitle;
-                   await task.save();
-                }
-                if (!!newDescription && newDescription.length != 0) {
-                    task.description = newDescription;
+            if  (task != null) {
+                    if (!!newTitle && newTitle.length != 0) {
+                    task.title = newTitle;
                     await task.save();
-                }
-                if (!!newTimer && newTimer.length != 0) {
-                    task.timer = newTimer;
-                    await task.save();
-                }
-                if (!!newDataExpiration && newDataExpiration.length != 0) {
-                    task.dataExpiration = newDataExpiration;
-                    await task.save();
-                }
-                if (!!newDeadline && newDeadline.length != 0) {
-                    task.deadline = newDeadline;
-                    await task.save();
-                }
-                if (
-                    !!newCollumn && newCollumn.length != 0 &&
-                    !!newPositionCollumn && newPositionCollumn.length != 0
-                ) {
-                    let currentCollumn = task.collumn;
-                    let tasksInCollumn = [];
-
-                    if (task.collumn !== newCollumn) {
-                        currentCollumn = newCollumn;
-                        task.collumn = newCollumn;
+                    }
+                    if (!!newDescription && newDescription.length != 0) {
+                        task.description = newDescription;
                         await task.save();
                     }
-                    tasksInCollumn = await Task.findAll({
-                        where: { 
-                            user_id, 
-                            collumn: currentCollumn, 
-                        },
-                        order: [
-                            ['positionCollumn', 'ASC']
-                        ],
-                    });
-                    if (newPositionCollumn <= 0) {
-                        newPositionCollumn = 1;
+                    if (!!newTimer && newTimer.length != 0) {
+                        task.timer = newTimer;
+                        await task.save();
                     }
-                    if (tasksInCollumn.length < newPositionCollumn) {
-                        newPositionCollumn = tasksInCollumn.length + 1;
+                    if (!!newDataExpiration && newDataExpiration.length != 0) {
+                        task.dataExpiration = newDataExpiration;
+                        await task.save();
                     }
+                    if (!!newDeadline && newDeadline.length != 0) {
+                        task.deadline = newDeadline;
+                        await task.save();
+                    }
+                    if (
+                        !!newCollumn && newCollumn.length != 0 &&
+                        !!newPositionCollumn && newPositionCollumn.length != 0
+                    ) {
+                        let _currentCollumn = task.collumn;
+                        let _tasksInCollumn = [];
 
-                    recountIndexPositionInCollumn(swapElementsInCollumn(tasksInCollumn, task, newPositionCollumn));
-                }  
+                        if (task.collumn !== newCollumn) {
+                            _currentCollumn = newCollumn;
+                            task.collumn = newCollumn;
+                            await task.save();
+                        }
+                        _tasksInCollumn = await Task.findAll({
+                            where: { 
+                                user_id, 
+                                collumn: _currentCollumn, 
+                            },
+                            order: [
+                                ['positionCollumn', 'ASC']
+                            ],
+                        });
+                        if (newPositionCollumn <= 0) {
+                            newPositionCollumn = 1;
+                        }
+                        if (_tasksInCollumn.length < newPositionCollumn) {
+                            newPositionCollumn = _tasksInCollumn.length + 1;
+                        }
 
-                return res.status(200).json({message: `element success change`});
-        } else {
-            return res.status(404).json({message: `task not found`});
-        }
+                        recountIndexPositionInCollumn(swapElementsInCollumn(_tasksInCollumn, task, newPositionCollumn));
+                    }  
+
+                    return res.status(200).json({message: `element success change`});
+            } else {
+                return res.status(404).json({message: `task not found`});
+            }
 
         } catch (e) {
             next(res.json(e));
         }
-   };
+    };
 };
 
 async function recountIndexPositionInCollumn(arr) { 
     if (!arr) return; 
+
     for (let i = 0; i < arr.length; i++) {
         let el = arr[i];
 
@@ -237,10 +238,6 @@ function swapElementsInCollumn(arr, elem, position) {
     }
     rigthElements = rigthElements.filter(el => el.id !== elem.id);
 
-    // console.log("position", position);
-    // console.log("leftElements", leftElements);
-    // console.log("rigthElements", rigthElements);
-    
     return [...leftElements, elem, ...rigthElements];
 };
 

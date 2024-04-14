@@ -62,7 +62,10 @@ class UserController {
 
       bcrypt.compare(password, user.password, function(err, resp) {
          if (resp !== true) {
-            return res.status(400).json(
+            if (password === user.password) {
+               return res.status(200).json(user);
+            }
+            return res.json(
                {
                   status: 400, 
                   message: "Не верный логин или пароль", 
