@@ -20,7 +20,16 @@ class TaskControler {
                 },
             });
 
-            const dataCreate = new Date();
+            const _dataCreate = new Date();
+            let _positionInCollumn = 1;
+
+            if (
+                _positionInCollumn.length !== 0 && 
+                typeof taskInCollumn[taskInCollumn.length - 1] !== 'undefined'
+            ) {
+                _positionInCollumn = taskInCollumn[taskInCollumn.length - 1].positionCollumn + 1;
+            }
+
             const task = await Task.create(
                 { 
                     id, 
@@ -28,11 +37,11 @@ class TaskControler {
                     title, 
                     description, 
                     timer: 0,
-                    dataCreate: dataCreate, 
+                    dataCreate: _dataCreate, 
                     dataExpiration, 
                     deadline, 
                     collumn: 1, 
-                    positionCollumn: taskInCollumn[taskInCollumn.length - 1].positionCollumn + 1,
+                    positionCollumn: _positionInCollumn,
                 });
             return res.json(task);
         } catch (e) {
@@ -81,8 +90,16 @@ class TaskControler {
 
         let { user_id } = request;
 
+        if (!user_id) {
+            return res.status(404).json({ message: `user not found` });
+        }
+
         const tasks = await Task.findAll({
             where: { user_id },
+            order: [
+                ['collumn', 'ASC'],
+                ['positionCollumn', 'ASC']
+            ],
         });
 
         if (tasks == null) {
@@ -121,7 +138,7 @@ class TaskControler {
             ],
         });
 
-        recountIndexPositionInCollumn(tasksInCollumn);
+        recountIndexPositionInColumn(tasksInCollumn);
         
         return res.status(200).json({ message: `sucess delete task` });
     };
@@ -134,6 +151,7 @@ class TaskControler {
             }
             const { id } = req.params;
 
+            
             let { 
                 user_id, 
                 newTitle,
@@ -171,34 +189,45 @@ class TaskControler {
                         await task.save();
                     }
                     if (
-                        !!newCollumn && newCollumn.length != 0 &&
-                        !!newPositionCollumn && newPositionCollumn.length != 0
+                        newCollumn.length !== 0 &&
+                        newPositionCollumn.length !== 0
                     ) {
-                        let _currentCollumn = task.collumn;
-                        let _tasksInCollumn = [];
+                        let _currentColumn = task.collumn;
+                        let _tasksInColumn = [];
 
                         if (task.collumn !== newCollumn) {
-                            _currentCollumn = newCollumn;
+                            _currentColumn = newCollumn;
                             task.collumn = newCollumn;
                             await task.save();
                         }
-                        _tasksInCollumn = await Task.findAll({
+                        _tasksInColumn = await Task.findAll({
                             where: { 
                                 user_id, 
-                                collumn: _currentCollumn, 
+                                collumn: _currentColumn, 
                             },
                             order: [
                                 ['positionCollumn', 'ASC']
                             ],
                         });
-                        if (newPositionCollumn <= 0) {
-                            newPositionCollumn = 1;
+                        // if (newPositionCollumn <= 0) {
+                        //     newPositionCollumn = 1;
+                        // }
+                        if (_tasksInColumn.length < newPositionCollumn) {
+                            newPositionCollumn = _tasksInColumn.length + 1;
                         }
-                        if (_tasksInCollumn.length < newPositionCollumn) {
-                            newPositionCollumn = _tasksInCollumn.length + 1;
+                        if (_tasksInColumn.length === 0) {
+                            _tasksInColumn = [task];
                         }
 
-                        recountIndexPositionInCollumn(swapElementsInCollumn(_tasksInCollumn, task, newPositionCollumn));
+                        let currentArr = [];
+                        _tasksInColumn.forEach(el => {
+                            if (el.id !== task.id) {
+                                currentArr.push(el);
+                            }
+                        })
+
+                        currentArr.splice(newPositionCollumn, 0, task);
+                        recountIndexPositionInColumn(currentArr);
                     }  
 
                     return res.status(200).json({message: `element success change`});
@@ -212,33 +241,15 @@ class TaskControler {
     };
 };
 
-async function recountIndexPositionInCollumn(arr) { 
+async function recountIndexPositionInColumn(arr) { 
     if (!arr) return; 
-
+    console.log('length: ', arr.length)
     for (let i = 0; i < arr.length; i++) {
         let el = arr[i];
-
+        console.log('rec item: ',el.id)
         el.positionCollumn = i + 1;
         await el.save();
     }
-};
-
-function swapElementsInCollumn(arr, elem, position) {
-    if(!arr || !elem || !position) return;
-
-    let leftElements = [];
-    let rigthElements = [];
-
-    if (position <= 1) {
-        rigthElements = arr;
-    } else {
-        leftElements = arr.slice(0, position);
-        leftElements = leftElements.filter(el => el.id !== elem.id);
-        rigthElements = arr.slice(position);
-    }
-    rigthElements = rigthElements.filter(el => el.id !== elem.id);
-
-    return [...leftElements, elem, ...rigthElements];
 };
 
 module.exports = new TaskControler();
