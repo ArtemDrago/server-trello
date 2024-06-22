@@ -209,9 +209,6 @@ class TaskControler {
                                 ['positionCollumn', 'ASC']
                             ],
                         });
-                        // if (newPositionCollumn <= 0) {
-                        //     newPositionCollumn = 1;
-                        // }
                         if (_tasksInColumn.length < newPositionCollumn) {
                             newPositionCollumn = _tasksInColumn.length + 1;
                         }
@@ -243,10 +240,9 @@ class TaskControler {
 
 async function recountIndexPositionInColumn(arr) { 
     if (!arr) return; 
-    console.log('length: ', arr.length)
+
     for (let i = 0; i < arr.length; i++) {
         let el = arr[i];
-        console.log('rec item: ',el.id)
         el.positionCollumn = i + 1;
         await el.save();
     }
